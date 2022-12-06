@@ -1,14 +1,178 @@
 package com.kunle.fragments.randomidgenerator;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+import androidx.databinding.DataBindingUtil;
 
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.util.Log;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.Toast;
+
+import com.google.android.material.textfield.TextInputEditText;
+import com.kunle.fragments.randomidgenerator.databinding.ActivityMainBinding;
+
+import org.apache.commons.lang3.ArrayUtils;
+
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
+
+    private final String[] character_list = {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j", "k", "l", "z", "x", "c", "v", "b", "n", "m",
+            "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Z", "X", "C", "V", "B", "N", "M",
+            "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+    private final String[] number_character_list = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
+    private final String[] lowercase_character_list = {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j", "k", "l", "z", "x", "c", "v", "b", "n", "m"};
+    private final String[] uppercase_character_list = {"Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Z", "X", "C", "V", "B", "N", "M"};
+    private ActivityMainBinding bind;
+    private int char_list_count;
+    String[] selected_id_array;
+    private String toEmailAddress;
+    private String emailSubject;
+    private String emailNote;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        bind = DataBindingUtil.setContentView(this, R.layout.activity_main);
+
+        setOnClickListeners();
+    }
+
+    private void setOnClickListeners() {
+        bind.emailInfoButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                showEmailOptions();
+            }
+        });
+
+        bind.createButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                sendEmail(createIDs());
+            }
+        });
+    }
+
+    private void showEmailOptions() {
+        LayoutInflater inflater = getLayoutInflater();
+        View emailView = inflater.inflate(R.layout.email_info, null);
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+
+        TextInputEditText toEmail = emailView.findViewById(R.id.toEmailAddress);
+        TextInputEditText subject = emailView.findViewById(R.id.subject);
+        TextInputEditText note = emailView.findViewById(R.id.note);
+
+        toEmail.setText((toEmailAddress != null ? toEmailAddress : null));
+        subject.setText((emailSubject != null ? emailSubject : null));
+        note.setText((emailNote != null ? emailNote : null));
+
+        builder.setView(emailView);
+        builder.setTitle("Enter Email Information")
+                .setPositiveButton("Confirm", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        toEmailAddress = String.valueOf(toEmail.getText()).trim();
+                        emailSubject = String.valueOf(subject.getText()).trim();
+                        emailNote = String.valueOf(note.getText()).trim();
+                        Toast.makeText(MainActivity.this, "Email information received and saved",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                })
+                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        dialogInterface.dismiss();
+                    }
+                });
+        builder.create().show();
+    }
+
+    private File createIDs() {
+        String filename = String.valueOf(bind.filename.getText()).trim() + ".txt";
+        //need to add restrictions for filename, like can't start with numbers
+        File externalFilesDirectory = this.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
+        File textFile = new File(externalFilesDirectory, filename);
+
+        boolean numbers = bind.numbersCheckBox.isChecked();
+        boolean lowercase = bind.lowercaseCheckBox.isChecked();
+        boolean uppercase = bind.uppercaseCheckBox.isChecked();
+
+        if (numbers && !lowercase && !uppercase) {
+            selected_id_array = number_character_list;
+        } else if (!numbers && lowercase && !uppercase) {
+            selected_id_array = lowercase_character_list;
+        } else if (!numbers && !lowercase && uppercase) {
+            selected_id_array = uppercase_character_list;
+        } else if (numbers && lowercase && !uppercase) {
+            selected_id_array = ArrayUtils.addAll(number_character_list, lowercase_character_list);
+        } else if (!numbers && lowercase && uppercase) {
+            selected_id_array = ArrayUtils.addAll(lowercase_character_list, uppercase_character_list);
+        } else if (numbers && !lowercase && uppercase) {
+            selected_id_array = ArrayUtils.addAll(number_character_list, uppercase_character_list);
+        } else if (numbers && lowercase && uppercase) {
+            selected_id_array = character_list;
+        } else {
+            Log.d("LogicTest", "Error, I've missed a scenario somehow!");
+        }
+
+        char_list_count = selected_id_array.length;
+
+        int character_num = Integer.parseInt(String.valueOf(bind.characterNum.getText()).trim());
+        int id_num = Integer.parseInt(String.valueOf(bind.idsNum.getText()).trim());
+        try {
+            File myObj = new File(filename);
+            myObj.createNewFile();
+        } catch (IOException e) {
+            Log.d("Exception", "Error creating file");
+            e.printStackTrace();
+        }
+
+        try {
+            FileWriter myWriter = new FileWriter(textFile);
+            for (int i = 0; i < id_num; i++) {
+                StringBuilder respid = new StringBuilder(character_num);
+                for (int x = 0; x < character_num; x++) {
+                    respid.append(selected_id_array[new Random().nextInt(char_list_count - 1)]);
+                }
+                respid.append(System.lineSeparator());
+                myWriter.write(String.valueOf(respid));
+            }
+            myWriter.flush();
+            myWriter.close();
+            return textFile;
+        } catch (IOException e) {
+            Log.d("Exception", "Error writing file");
+            e.printStackTrace();
+        }
+        return null;
+    }
+
+    private void sendEmail(File file) {
+        Uri fileUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+
+        try {
+            final Intent emailIntent = new Intent(Intent.ACTION_SEND);
+            emailIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            emailIntent.setType("message/rfc822");
+            emailIntent.putExtra(Intent.EXTRA_EMAIL, new String[]{toEmailAddress});
+            emailIntent.putExtra(Intent.EXTRA_STREAM, fileUri);
+            emailIntent.putExtra(Intent.EXTRA_SUBJECT, emailSubject);
+            emailIntent.putExtra(Intent.EXTRA_TEXT, emailNote);
+            this.startActivity(Intent.createChooser(emailIntent, "Sending email..."));
+        } catch (Throwable e) {
+            Toast.makeText(this, "Request failed try again: " + e.toString(), Toast.LENGTH_LONG).show();
+        }
     }
 }
