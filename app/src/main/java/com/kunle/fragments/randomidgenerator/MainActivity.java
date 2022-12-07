@@ -1,14 +1,23 @@
 package com.kunle.fragments.randomidgenerator;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
 import androidx.databinding.DataBindingUtil;
 
+
+import android.app.AlertDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.TextUtils;
+import android.text.style.AbsoluteSizeSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -22,7 +31,12 @@ import org.apache.commons.lang3.ArrayUtils;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -38,6 +52,8 @@ public class MainActivity extends AppCompatActivity {
     private String toEmailAddress;
     private String emailSubject;
     private String emailNote;
+    private boolean anyCheckBoxChecked;
+    private String filename;
 
 
     @Override
@@ -46,7 +62,30 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         bind = DataBindingUtil.setContentView(this, R.layout.activity_main);
 
+        setLayoutText();
         setOnClickListeners();
+    }
+
+    private void setLayoutText() {
+        SpannableString first_part = new SpannableString("ID Characteristics");
+        SpannableString second_part = new SpannableString("(must select at least 1)");
+        second_part.setSpan(new AbsoluteSizeSpan(18, true),
+                0, first_part.length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+        second_part.setSpan(new AbsoluteSizeSpan(15, true),
+                0, second_part.length(), Spannable.SPAN_INCLUSIVE_EXCLUSIVE);
+
+        CharSequence finalText = TextUtils.concat(first_part, " ", second_part);
+        bind.checkBoxLabel.setText(finalText);
+
+        try {
+            SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd--HHmmss", Locale.US);
+            Date now = new Date();
+            filename = "GeneratedIDs-" + formatter.format(now) + ".txt";
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        bind.fileName.setText(filename);
     }
 
     private void setOnClickListeners() {
@@ -60,7 +99,54 @@ public class MainActivity extends AppCompatActivity {
         bind.createButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                sendEmail(createIDs());
+                ExecutorService executor = Executors.newSingleThreadExecutor();
+                Handler handler = new Handler(Looper.getMainLooper());
+
+                executor.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        //background work here
+                        sendEmail(createIDs());
+                        
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                //UI Thread work here;
+                            }
+                        });
+                    }
+                });
+
+            }
+        });
+
+        bind.numbersCheckBox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                anyCheckBoxChecked = bind.numbersCheckBox.isChecked() ||
+                        bind.lowercaseCheckBox.isChecked() ||
+                        bind.uppercaseCheckBox.isChecked();
+                bind.createButton.setEnabled(anyCheckBoxChecked);
+            }
+        });
+
+        bind.lowercaseCheckBox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                anyCheckBoxChecked = bind.numbersCheckBox.isChecked() ||
+                        bind.lowercaseCheckBox.isChecked() ||
+                        bind.uppercaseCheckBox.isChecked();
+                bind.createButton.setEnabled(anyCheckBoxChecked);
+            }
+        });
+
+        bind.uppercaseCheckBox.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                anyCheckBoxChecked = bind.numbersCheckBox.isChecked() ||
+                        bind.lowercaseCheckBox.isChecked() ||
+                        bind.uppercaseCheckBox.isChecked();
+                bind.createButton.setEnabled(anyCheckBoxChecked);
             }
         });
     }
@@ -69,6 +155,7 @@ public class MainActivity extends AppCompatActivity {
         LayoutInflater inflater = getLayoutInflater();
         View emailView = inflater.inflate(R.layout.email_info, null);
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
+        int dialog_button_color = ContextCompat.getColor(this, R.color.dialog_button_color);
 
         TextInputEditText toEmail = emailView.findViewById(R.id.toEmailAddress);
         TextInputEditText subject = emailView.findViewById(R.id.subject);
@@ -96,14 +183,18 @@ public class MainActivity extends AppCompatActivity {
                         dialogInterface.dismiss();
                     }
                 });
-        builder.create().show();
+        AlertDialog alert = builder.create();
+        alert.show();
+        alert.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(dialog_button_color);
+        alert.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(dialog_button_color);
+
     }
 
     private File createIDs() {
-        String filename = String.valueOf(bind.filename.getText()).trim() + ".txt";
         //need to add restrictions for filename, like can't start with numbers
         File externalFilesDirectory = this.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
         File textFile = new File(externalFilesDirectory, filename);
+        textFile.deleteOnExit();
 
         boolean numbers = bind.numbersCheckBox.isChecked();
         boolean lowercase = bind.lowercaseCheckBox.isChecked();
@@ -161,6 +252,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void sendEmail(File file) {
         Uri fileUri = FileProvider.getUriForFile(this, getPackageName() + ".provider", file);
+        file.deleteOnExit();
 
         try {
             final Intent emailIntent = new Intent(Intent.ACTION_SEND);
