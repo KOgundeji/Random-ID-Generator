@@ -21,6 +21,7 @@ import android.text.style.AbsoluteSizeSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.ProgressBar;
 import android.widget.Toast;
 
 import com.google.android.material.textfield.TextInputEditText;
@@ -37,10 +38,11 @@ import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
-    private final String[] character_list = {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j", "k", "l", "z", "x", "c", "v", "b", "n", "m",
+    private final String[] full_character_list = {"q", "w", "e", "r", "t", "y", "u", "i", "o", "p", "a", "s", "d", "f", "g", "h", "j", "k", "l", "z", "x", "c", "v", "b", "n", "m",
             "Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P", "A", "S", "D", "F", "G", "H", "J", "K", "L", "Z", "X", "C", "V", "B", "N", "M",
             "0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
     private final String[] number_character_list = {"0", "1", "2", "3", "4", "5", "6", "7", "8", "9"};
@@ -54,7 +56,8 @@ public class MainActivity extends AppCompatActivity {
     private String emailNote;
     private boolean anyCheckBoxChecked;
     private String filename;
-
+    private File textFile;
+    private int count;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -99,24 +102,8 @@ public class MainActivity extends AppCompatActivity {
         bind.createButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                ExecutorService executor = Executors.newSingleThreadExecutor();
-                Handler handler = new Handler(Looper.getMainLooper());
-
-                executor.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        //background work here
-                        sendEmail(createIDs());
-                        
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                //UI Thread work here;
-                            }
-                        });
-                    }
-                });
-
+//                sendEmail(createIDs());
+                createIDs();
             }
         });
 
@@ -187,13 +174,11 @@ public class MainActivity extends AppCompatActivity {
         alert.show();
         alert.getButton(DialogInterface.BUTTON_POSITIVE).setTextColor(dialog_button_color);
         alert.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(dialog_button_color);
-
     }
 
     private File createIDs() {
-        //need to add restrictions for filename, like can't start with numbers
         File externalFilesDirectory = this.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
-        File textFile = new File(externalFilesDirectory, filename);
+        textFile = new File(externalFilesDirectory, filename);
         textFile.deleteOnExit();
 
         boolean numbers = bind.numbersCheckBox.isChecked();
@@ -213,15 +198,15 @@ public class MainActivity extends AppCompatActivity {
         } else if (numbers && !lowercase && uppercase) {
             selected_id_array = ArrayUtils.addAll(number_character_list, uppercase_character_list);
         } else if (numbers && lowercase && uppercase) {
-            selected_id_array = character_list;
+            selected_id_array = full_character_list;
         } else {
             Log.d("LogicTest", "Error, I've missed a scenario somehow!");
         }
 
         char_list_count = selected_id_array.length;
 
-        int character_num = Integer.parseInt(String.valueOf(bind.characterNum.getText()).trim());
-        int id_num = Integer.parseInt(String.valueOf(bind.idsNum.getText()).trim());
+        final int numCharactersPerID = Integer.parseInt(String.valueOf(bind.characterNum.getText()).trim());
+        final int numOfIDs = Integer.parseInt(String.valueOf(bind.idsNum.getText()).trim());
         try {
             File myObj = new File(filename);
             myObj.createNewFile();
@@ -230,24 +215,73 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
         }
 
-        try {
-            FileWriter myWriter = new FileWriter(textFile);
-            for (int i = 0; i < id_num; i++) {
-                StringBuilder respid = new StringBuilder(character_num);
-                for (int x = 0; x < character_num; x++) {
-                    respid.append(selected_id_array[new Random().nextInt(char_list_count - 1)]);
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        LayoutInflater inflater = this.getLayoutInflater();
+        View view = inflater.inflate(R.layout.progress_bar, null);
+
+        ProgressBar progressBar = view.findViewById(R.id.progress_bar);
+        progressBar.setMax(numOfIDs);
+
+        builder.setView(view);
+        AlertDialog alert = builder.create();
+        alert.setCancelable(false);
+        alert.show();
+
+        Log.d("GetMaxTest", "getMax: " + progressBar.getMax());
+
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler handler = new Handler(Looper.getMainLooper());
+
+        executor.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    int y = 0;
+                    FileWriter myWriter = new FileWriter(textFile);
+                    for (int i = 0; i < numOfIDs; i++) {
+                        StringBuilder respid = new StringBuilder(numCharactersPerID);
+                        count = i;
+
+                        handler.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                if ((count % (numOfIDs / 100) == 0)) {
+                                    progressBar.setProgress(count);
+                                }
+                            }
+                        });
+
+
+                        for (int x = 0; x < numCharactersPerID; x++) {
+                            respid.append(selected_id_array[new Random().nextInt(char_list_count - 1)]);
+                        }
+
+                        respid.append(System.lineSeparator());
+                        myWriter.write(String.valueOf(respid));
+                        y = i;
+                    }
+                    myWriter.flush();
+                    myWriter.close();
+                    Log.d("CompletionTest", "id#: " + y);
+                    executor.shutdown();
+
+                } catch (IOException e) {
+                    Log.d("Exception", "Error writing file");
+                    e.printStackTrace();
                 }
-                respid.append(System.lineSeparator());
-                myWriter.write(String.valueOf(respid));
             }
-            myWriter.flush();
-            myWriter.close();
-            return textFile;
-        } catch (IOException e) {
-            Log.d("Exception", "Error writing file");
+        });
+
+        try {
+            while (!executor.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
+            }
+
+            Log.d("ThreadSleepTest", "Finished!");
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
-        return null;
+        alert.dismiss();
+        return textFile;
     }
 
     private void sendEmail(File file) {

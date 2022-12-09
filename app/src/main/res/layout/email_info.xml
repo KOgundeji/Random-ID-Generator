@@ -28,6 +28,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="start"
+                android:inputType="textEmailAddress"
                 android:hint="Recipient Email address" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -47,6 +48,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="start"
+                android:inputType="textEmailSubject"
                 android:hint="Subject" />
 
         </com.google.android.material.textfield.TextInputLayout>

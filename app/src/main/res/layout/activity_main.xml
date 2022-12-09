@@ -42,7 +42,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="start"
-                android:hint="# of ids needed" />
+                android:hint="# of ids needed"
+                android:inputType="number" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -64,7 +65,8 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="start"
-                android:hint="# of characters per ID" />
+                android:hint="# of characters per ID"
+                android:inputType="number" />
 
         </com.google.android.material.textfield.TextInputLayout>
 
@@ -172,6 +174,5 @@
 
 
         </LinearLayout>
-
     </androidx.constraintlayout.widget.ConstraintLayout>
 </layout>
