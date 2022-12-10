@@ -14,25 +14,37 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.Editable;
 import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.text.method.DigitsKeyListener;
 import android.text.style.AbsoluteSizeSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
+import android.widget.LinearLayout;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.material.textfield.TextInputEditText;
 import com.kunle.fragments.randomidgenerator.databinding.ActivityMainBinding;
 
 import org.apache.commons.lang3.ArrayUtils;
+import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
+import java.text.DecimalFormatSymbols;
+import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 import java.util.Random;
@@ -57,13 +69,15 @@ public class MainActivity extends AppCompatActivity {
     private boolean anyCheckBoxChecked;
     private String filename;
     private File textFile;
-    private int count;
+    private int count = 0;
+    private ArrayList<StringBuilder> uniqueIDChecker;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         bind = DataBindingUtil.setContentView(this, R.layout.activity_main);
+        uniqueIDChecker = new ArrayList<>();
 
         setLayoutText();
         setOnClickListeners();
@@ -92,6 +106,79 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void setOnClickListeners() {
+        bind.idsNum.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                bind.idsNum.removeTextChangedListener(this);
+                if (!editable.toString().equals("")) {
+                    try {
+                        String originalString = editable.toString();
+                        long temp_num_storage;
+
+                        if (originalString.contains(",")) {
+                            originalString = originalString.replaceAll(",", "");
+                        }
+                        temp_num_storage = Long.parseLong(originalString);
+
+                        DecimalFormat df = (DecimalFormat) NumberFormat.getInstance(Locale.US);
+                        df.applyPattern("#,###,###");
+                        bind.idsNum.setText(df.format(temp_num_storage));
+                        bind.idsNum.setSelection(bind.idsNum.getText().length());
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(MainActivity.this, "Number is too large!",
+                                Toast.LENGTH_SHORT).show();
+                        e.printStackTrace();
+                    }
+                }
+                bind.idsNum.addTextChangedListener(this);
+            }
+        });
+
+        bind.characterNum.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                bind.characterNum.removeTextChangedListener(this);
+                if (!editable.toString().equals("")) {
+                    try {
+                        String originalString = editable.toString();
+                        long temp_num_storage;
+
+                        if (originalString.contains(",")) {
+                            originalString = originalString.replaceAll(",", "");
+                        }
+                        temp_num_storage = Long.parseLong(originalString);
+
+                        DecimalFormat df = (DecimalFormat) NumberFormat.getInstance(Locale.US);
+                        df.applyPattern("#,###,###");
+                        bind.characterNum.setText(df.format(temp_num_storage));
+                        bind.characterNum.setSelection(bind.characterNum.getText().length());
+                    } catch (NumberFormatException e) {
+                        Toast.makeText(MainActivity.this, "Number is too large!",
+                                Toast.LENGTH_SHORT).show();
+                        e.printStackTrace();
+                    }
+                }
+                bind.characterNum.addTextChangedListener(this);
+            }
+        });
+
+
         bind.emailInfoButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -102,8 +189,36 @@ public class MainActivity extends AppCompatActivity {
         bind.createButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-//                sendEmail(createIDs());
-                createIDs();
+                String idsNum_text = String.valueOf(bind.idsNum.getText()).trim();
+                String characterNum_text = String.valueOf(bind.characterNum.getText()).trim();
+
+                Log.d("idTextTest", "idsNum_text: " + idsNum_text);
+
+                if (idsNum_text.contains(",")) {
+                    idsNum_text = idsNum_text.replaceAll(",", "");
+                }
+
+                if (characterNum_text.contains(",")) {
+                    characterNum_text = characterNum_text.replaceAll(",", "");
+                }
+
+                int numCharactersPerID;
+                int numOfIDs;
+                try {
+                    numCharactersPerID = Integer.parseInt(characterNum_text);
+                    numOfIDs = Integer.parseInt(idsNum_text);
+
+                    if ((numOfIDs > 0) && (numCharactersPerID > 0)) {
+                        createIDs();
+                    } else {
+                        Toast.makeText(MainActivity.this, "Both # of IDs and # of characters per ID need to be greater than 0",
+                                Toast.LENGTH_SHORT).show();
+                    }
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    Toast.makeText(MainActivity.this, "Please enter all required numeric values before creating IDs",
+                            Toast.LENGTH_SHORT).show();
+                }
             }
         });
 
@@ -176,9 +291,11 @@ public class MainActivity extends AppCompatActivity {
         alert.getButton(DialogInterface.BUTTON_NEGATIVE).setTextColor(dialog_button_color);
     }
 
-    private File createIDs() {
+    private void createIDs() {
         File externalFilesDirectory = this.getExternalFilesDir(Environment.DIRECTORY_DOCUMENTS);
         textFile = new File(externalFilesDirectory, filename);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        Handler handler = new Handler(Looper.getMainLooper());
         textFile.deleteOnExit();
 
         boolean numbers = bind.numbersCheckBox.isChecked();
@@ -205,8 +322,19 @@ public class MainActivity extends AppCompatActivity {
 
         char_list_count = selected_id_array.length;
 
-        final int numCharactersPerID = Integer.parseInt(String.valueOf(bind.characterNum.getText()).trim());
-        final int numOfIDs = Integer.parseInt(String.valueOf(bind.idsNum.getText()).trim());
+        String idsNum_text = String.valueOf(bind.idsNum.getText()).trim();
+        String characterNum_text = String.valueOf(bind.characterNum.getText()).trim();
+
+        if (idsNum_text.contains(",")) {
+            idsNum_text = idsNum_text.replaceAll(",", "");
+        }
+
+        if (characterNum_text.contains(",")) {
+            characterNum_text = characterNum_text.replaceAll(",", "");
+        }
+
+        final int numCharactersPerID = Integer.parseInt(characterNum_text);
+        final int numOfIDs = Integer.parseInt(idsNum_text);
         try {
             File myObj = new File(filename);
             myObj.createNewFile();
@@ -220,6 +348,7 @@ public class MainActivity extends AppCompatActivity {
         View view = inflater.inflate(R.layout.progress_bar, null);
 
         ProgressBar progressBar = view.findViewById(R.id.progress_bar);
+        TextView percent_progress = view.findViewById(R.id.percent_progress);
         progressBar.setMax(numOfIDs);
 
         builder.setView(view);
@@ -227,61 +356,50 @@ public class MainActivity extends AppCompatActivity {
         alert.setCancelable(false);
         alert.show();
 
-        Log.d("GetMaxTest", "getMax: " + progressBar.getMax());
-
-        ExecutorService executor = Executors.newSingleThreadExecutor();
-        Handler handler = new Handler(Looper.getMainLooper());
-
         executor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
-                    int y = 0;
                     FileWriter myWriter = new FileWriter(textFile);
-                    for (int i = 0; i < numOfIDs; i++) {
+                    while (count < numOfIDs) {
                         StringBuilder respid = new StringBuilder(numCharactersPerID);
-                        count = i;
-
-                        handler.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                if ((count % (numOfIDs / 100) == 0)) {
-                                    progressBar.setProgress(count);
-                                }
-                            }
-                        });
-
-
                         for (int x = 0; x < numCharactersPerID; x++) {
                             respid.append(selected_id_array[new Random().nextInt(char_list_count - 1)]);
                         }
+                        if (!uniqueIDChecker.contains(respid)) {
+                            uniqueIDChecker.add(respid);
+                            respid.append(System.lineSeparator());
+                            myWriter.write(String.valueOf(respid));
+                            count++;
 
-                        respid.append(System.lineSeparator());
-                        myWriter.write(String.valueOf(respid));
-                        y = i;
+                            handler.post(new Runnable() {
+                                @Override
+                                public void run() {
+                                    progressBar.setProgress(count);
+                                    double percent_prog = ((double) count / (double) numOfIDs) * 100;
+//                                    Log.d("ProgressTest", "percent: " + percent_prog + " count: " + count + " numofIDs: " + numOfIDs);
+                                    String progress = (int) percent_prog + "%";
+                                    percent_progress.setText(progress);
+                                }
+                            });
+                        }
                     }
                     myWriter.flush();
                     myWriter.close();
-                    Log.d("CompletionTest", "id#: " + y);
-                    executor.shutdown();
-
                 } catch (IOException e) {
                     Log.d("Exception", "Error writing file");
                     e.printStackTrace();
                 }
+
+                handler.post(new Runnable() {
+                    @Override
+                    public void run() {
+                        alert.dismiss();
+                        sendEmail(textFile);
+                    }
+                });
             }
         });
-
-        try {
-            while (!executor.awaitTermination(5000, TimeUnit.MILLISECONDS)) {
-            }
-
-            Log.d("ThreadSleepTest", "Finished!");
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-        alert.dismiss();
-        return textFile;
     }
 
     private void sendEmail(File file) {
@@ -298,7 +416,7 @@ public class MainActivity extends AppCompatActivity {
             emailIntent.putExtra(Intent.EXTRA_TEXT, emailNote);
             this.startActivity(Intent.createChooser(emailIntent, "Sending email..."));
         } catch (Throwable e) {
-            Toast.makeText(this, "Request failed try again: " + e.toString(), Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "Request failed try again: " + e, Toast.LENGTH_LONG).show();
         }
     }
 }
