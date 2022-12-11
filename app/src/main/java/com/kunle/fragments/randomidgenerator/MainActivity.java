@@ -19,14 +19,10 @@ import android.text.Spannable;
 import android.text.SpannableString;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.text.method.DigitsKeyListener;
 import android.text.style.AbsoluteSizeSpan;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.Window;
-import android.view.WindowManager;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -35,22 +31,19 @@ import com.google.android.material.textfield.TextInputEditText;
 import com.kunle.fragments.randomidgenerator.databinding.ActivityMainBinding;
 
 import org.apache.commons.lang3.ArrayUtils;
-import org.w3c.dom.Text;
 
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.text.DecimalFormat;
-import java.text.DecimalFormatSymbols;
 import java.text.NumberFormat;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Locale;
 import java.util.Random;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -70,20 +63,20 @@ public class MainActivity extends AppCompatActivity {
     private String filename;
     private File textFile;
     private int count = 0;
-    private ArrayList<StringBuilder> uniqueIDChecker;
+    private HashSet<String> uniqueIDChecker = new HashSet<>();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         bind = DataBindingUtil.setContentView(this, R.layout.activity_main);
-        uniqueIDChecker = new ArrayList<>();
 
         setLayoutText();
         setOnClickListeners();
     }
 
     private void setLayoutText() {
+        //create a very specifically formatted text for the Main UI page
         SpannableString first_part = new SpannableString("ID Characteristics");
         SpannableString second_part = new SpannableString("(must select at least 1)");
         second_part.setSpan(new AbsoluteSizeSpan(18, true),
@@ -94,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
         CharSequence finalText = TextUtils.concat(first_part, " ", second_part);
         bind.checkBoxLabel.setText(finalText);
 
+        //auto-create email file name to avoid user error (name based on unique data and time)
         try {
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd--HHmmss", Locale.US);
             Date now = new Date();
@@ -115,18 +109,19 @@ public class MainActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
 
+            //on-change listener to format numbers while user is typing them in
             @Override
             public void afterTextChanged(Editable editable) {
                 bind.idsNum.removeTextChangedListener(this);
                 if (!editable.toString().equals("")) {
                     try {
                         String originalString = editable.toString();
-                        long temp_num_storage;
+                        int temp_num_storage;
 
                         if (originalString.contains(",")) {
                             originalString = originalString.replaceAll(",", "");
                         }
-                        temp_num_storage = Long.parseLong(originalString);
+                        temp_num_storage = Integer.parseInt(originalString);
 
                         DecimalFormat df = (DecimalFormat) NumberFormat.getInstance(Locale.US);
                         df.applyPattern("#,###,###");
@@ -151,18 +146,19 @@ public class MainActivity extends AppCompatActivity {
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
             }
 
+            //on-change listener to format numbers while user is typing them in
             @Override
             public void afterTextChanged(Editable editable) {
                 bind.characterNum.removeTextChangedListener(this);
                 if (!editable.toString().equals("")) {
                     try {
                         String originalString = editable.toString();
-                        long temp_num_storage;
+                        int temp_num_storage;
 
                         if (originalString.contains(",")) {
                             originalString = originalString.replaceAll(",", "");
                         }
-                        temp_num_storage = Long.parseLong(originalString);
+                        temp_num_storage = Integer.parseInt(originalString);
 
                         DecimalFormat df = (DecimalFormat) NumberFormat.getInstance(Locale.US);
                         df.applyPattern("#,###,###");
@@ -189,10 +185,9 @@ public class MainActivity extends AppCompatActivity {
         bind.createButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                //does a few validation checks before beginning to create IDs
                 String idsNum_text = String.valueOf(bind.idsNum.getText()).trim();
                 String characterNum_text = String.valueOf(bind.characterNum.getText()).trim();
-
-                Log.d("idTextTest", "idsNum_text: " + idsNum_text);
 
                 if (idsNum_text.contains(",")) {
                     idsNum_text = idsNum_text.replaceAll(",", "");
@@ -222,12 +217,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        //next 3 on-click listeners meant to enable "Create IDs" button ONLY if
+        //one of 3 checkboxes is selected. User must choose 1 to actually create IDs
         bind.numbersCheckBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                anyCheckBoxChecked = bind.numbersCheckBox.isChecked() ||
-                        bind.lowercaseCheckBox.isChecked() ||
-                        bind.uppercaseCheckBox.isChecked();
+                anyCheckBoxChecked = bind.numbersCheckBox.isChecked()
+                        || bind.lowercaseCheckBox.isChecked()
+                        || bind.uppercaseCheckBox.isChecked();
                 bind.createButton.setEnabled(anyCheckBoxChecked);
             }
         });
@@ -235,9 +232,9 @@ public class MainActivity extends AppCompatActivity {
         bind.lowercaseCheckBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                anyCheckBoxChecked = bind.numbersCheckBox.isChecked() ||
-                        bind.lowercaseCheckBox.isChecked() ||
-                        bind.uppercaseCheckBox.isChecked();
+                anyCheckBoxChecked = bind.numbersCheckBox.isChecked()
+                        || bind.lowercaseCheckBox.isChecked()
+                        || bind.uppercaseCheckBox.isChecked();
                 bind.createButton.setEnabled(anyCheckBoxChecked);
             }
         });
@@ -245,15 +242,17 @@ public class MainActivity extends AppCompatActivity {
         bind.uppercaseCheckBox.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                anyCheckBoxChecked = bind.numbersCheckBox.isChecked() ||
-                        bind.lowercaseCheckBox.isChecked() ||
-                        bind.uppercaseCheckBox.isChecked();
+                anyCheckBoxChecked = bind.numbersCheckBox.isChecked()
+                        || bind.lowercaseCheckBox.isChecked()
+                        || bind.uppercaseCheckBox.isChecked();
                 bind.createButton.setEnabled(anyCheckBoxChecked);
             }
         });
     }
 
     private void showEmailOptions() {
+        //creates and inflates email options.
+        //These values will populate email "To:","Subject", and email body when email is created
         LayoutInflater inflater = getLayoutInflater();
         View emailView = inflater.inflate(R.layout.email_info, null);
         android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(this);
@@ -263,6 +262,7 @@ public class MainActivity extends AppCompatActivity {
         TextInputEditText subject = emailView.findViewById(R.id.subject);
         TextInputEditText note = emailView.findViewById(R.id.note);
 
+        //repopulates email information if already entered and saved previously
         toEmail.setText((toEmailAddress != null ? toEmailAddress : null));
         subject.setText((emailSubject != null ? emailSubject : null));
         note.setText((emailNote != null ? emailNote : null));
@@ -302,6 +302,7 @@ public class MainActivity extends AppCompatActivity {
         boolean lowercase = bind.lowercaseCheckBox.isChecked();
         boolean uppercase = bind.uppercaseCheckBox.isChecked();
 
+        //logic to see which character lists program should use to create IDs
         if (numbers && !lowercase && !uppercase) {
             selected_id_array = number_character_list;
         } else if (!numbers && lowercase && !uppercase) {
@@ -316,8 +317,6 @@ public class MainActivity extends AppCompatActivity {
             selected_id_array = ArrayUtils.addAll(number_character_list, uppercase_character_list);
         } else if (numbers && lowercase && uppercase) {
             selected_id_array = full_character_list;
-        } else {
-            Log.d("LogicTest", "Error, I've missed a scenario somehow!");
         }
 
         char_list_count = selected_id_array.length;
@@ -335,71 +334,91 @@ public class MainActivity extends AppCompatActivity {
 
         final int numCharactersPerID = Integer.parseInt(characterNum_text);
         final int numOfIDs = Integer.parseInt(idsNum_text);
-        try {
-            File myObj = new File(filename);
-            myObj.createNewFile();
-        } catch (IOException e) {
-            Log.d("Exception", "Error creating file");
-            e.printStackTrace();
-        }
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        LayoutInflater inflater = this.getLayoutInflater();
-        View view = inflater.inflate(R.layout.progress_bar, null);
-
-        ProgressBar progressBar = view.findViewById(R.id.progress_bar);
-        TextView percent_progress = view.findViewById(R.id.percent_progress);
-        progressBar.setMax(numOfIDs);
-
-        builder.setView(view);
-        AlertDialog alert = builder.create();
-        alert.setCancelable(false);
-        alert.show();
-
-        executor.execute(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    FileWriter myWriter = new FileWriter(textFile);
-                    while (count < numOfIDs) {
-                        StringBuilder respid = new StringBuilder(numCharactersPerID);
-                        for (int x = 0; x < numCharactersPerID; x++) {
-                            respid.append(selected_id_array[new Random().nextInt(char_list_count - 1)]);
-                        }
-                        if (!uniqueIDChecker.contains(respid)) {
-                            uniqueIDChecker.add(respid);
-                            respid.append(System.lineSeparator());
-                            myWriter.write(String.valueOf(respid));
-                            count++;
-
-                            handler.post(new Runnable() {
-                                @Override
-                                public void run() {
-                                    progressBar.setProgress(count);
-                                    double percent_prog = ((double) count / (double) numOfIDs) * 100;
-//                                    Log.d("ProgressTest", "percent: " + percent_prog + " count: " + count + " numofIDs: " + numOfIDs);
-                                    String progress = (int) percent_prog + "%";
-                                    percent_progress.setText(progress);
-                                }
-                            });
-                        }
-                    }
-                    myWriter.flush();
-                    myWriter.close();
-                } catch (IOException e) {
-                    Log.d("Exception", "Error writing file");
-                    e.printStackTrace();
-                }
-
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        alert.dismiss();
-                        sendEmail(textFile);
-                    }
-                });
+        //check to see if even possible for the selected character array
+        //to create as many unique IDs as user need
+        //Math.pow() calculation is calculating maximum # of possible unique permutations
+        if (numOfIDs <= Math.pow(char_list_count, numCharactersPerID)) {
+            try {
+                File myObj = new File(filename);
+                myObj.createNewFile();
+            } catch (IOException e) {
+                Log.d("Exception", "Error creating file");
+                e.printStackTrace();
             }
-        });
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            LayoutInflater inflater = this.getLayoutInflater();
+            View view = inflater.inflate(R.layout.progress_bar, null);
+
+            ProgressBar progressBar = view.findViewById(R.id.progress_bar);
+            TextView percent_progress_value = view.findViewById(R.id.percent_progress);
+            progressBar.setMax(numOfIDs);
+
+            builder.setView(view);
+            AlertDialog alert = builder.create();
+            alert.setCancelable(false);
+            alert.show();
+
+            //runs labor-intensive ID creation on background thread,
+            //with updates to UI progress bar on main thread
+            executor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    try {
+                        FileWriter myWriter = new FileWriter(textFile);
+                        while (count < numOfIDs) {
+                            StringBuilder respid = new StringBuilder(numCharactersPerID);
+                            for (int x = 0; x < numCharactersPerID; x++) {
+                                respid.append(selected_id_array[new Random().nextInt(char_list_count)]);
+                            }
+                            //checks if ID is already in hashset (i.e. is it unique)
+                            if (uniqueIDChecker.add(String.valueOf(respid))) {
+                                respid.append(System.lineSeparator());
+                                myWriter.write(String.valueOf(respid));
+                                count++;
+
+                                handler.post(new Runnable() {
+                                    @Override
+                                    public void run() {
+                                        progressBar.setProgress(count);
+                                        double percent_progress_text = ((double) count / (double) numOfIDs) * 100;
+                                        String progress = (int) percent_progress_text + "%";
+                                        percent_progress_value.setText(progress);
+                                    }
+                                });
+                            }
+                        }
+                        myWriter.flush();
+                        myWriter.close();
+                    } catch (IOException e) {
+                        Log.d("Exception", "Error writing file");
+                        e.printStackTrace();
+                    }
+
+                    handler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            alert.dismiss();
+                            sendEmail(textFile);
+                        }
+                    });
+                }
+            });
+        } else {
+            AlertDialog.Builder builder = new AlertDialog.Builder(this);
+            DecimalFormat df = new DecimalFormat("#,###");
+            builder.setMessage("Can't create " + df.format(numOfIDs)
+                            + " unique IDs with parameters chosen. " +
+                            "Please either change ID characteristics or increase # of characters per ID")
+                    .setPositiveButton("OK", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialogInterface, int i) {
+                            dialogInterface.dismiss();
+                        }
+                    });
+            builder.create().show();
+        }
     }
 
     private void sendEmail(File file) {

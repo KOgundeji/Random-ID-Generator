@@ -14,7 +14,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="20dp"
             android:gravity="center_horizontal"
-            android:text="Create Randomly Generated IDs"
+            android:text="@string/headline"
             android:textColor="@color/label_text_color"
             android:textSize="22sp"
             android:textStyle="bold"
@@ -31,6 +31,7 @@
             android:layout_marginTop="20dp"
 
             app:boxStrokeColor="@color/hint_box"
+            app:helperText="@string/maximum"
             app:hintTextColor="@color/hint_box"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.0"
@@ -42,7 +43,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="start"
-                android:hint="# of ids needed"
+                android:hint="@string/ids_needed"
                 android:inputType="number" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -54,6 +55,7 @@
             android:layout_marginStart="20dp"
             android:layout_marginTop="20dp"
             app:boxStrokeColor="@color/hint_box"
+            app:helperText="@string/maximum"
             app:hintTextColor="@color/hint_box"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintHorizontal_bias="0.0"
@@ -65,7 +67,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:gravity="start"
-                android:hint="# of characters per ID"
+                android:hint="@string/characters_per_id"
                 android:inputType="number" />
 
         </com.google.android.material.textfield.TextInputLayout>
@@ -77,7 +79,7 @@
             android:layout_marginStart="20dp"
             android:layout_marginTop="20dp"
             android:enabled="false"
-            android:hint="Name of generated document"
+            android:hint="@string/document_name"
             app:boxStrokeColor="@color/hint_box"
             app:hintTextColor="@color/hint_box"
             app:layout_constraintEnd_toEndOf="parent"
@@ -112,14 +114,14 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:textColor="@color/label_text_color"
-                android:textSize="18dp" />
+                android:textSize="18sp" />
 
             <com.google.android.material.checkbox.MaterialCheckBox
                 android:id="@+id/numbers_checkBox"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
                 android:layout_marginTop="5dp"
-                android:text="ID characters should have numbers"
+                android:text="@string/numbers_req"
                 android:textSize="14sp"
                 tools:layout_editor_absoluteX="24dp"
                 tools:layout_editor_absoluteY="245dp" />
@@ -128,7 +130,7 @@
                 android:id="@+id/lowercase_checkBox"
                 android:layout_width="wrap_content"
                 android:layout_height="40dp"
-                android:text="ID characters should have lowercase letters"
+                android:text="@string/lowercase_req"
                 android:textSize="14sp"
                 tools:layout_editor_absoluteX="22dp"
                 tools:layout_editor_absoluteY="299dp" />
@@ -137,7 +139,7 @@
                 android:id="@+id/uppercase_checkBox"
                 android:layout_width="350dp"
                 android:layout_height="40dp"
-                android:text="ID characters should have uppercase letters"
+                android:text="@string/uppercase_req"
                 android:textSize="14sp"
                 tools:layout_editor_absoluteX="22dp"
                 tools:layout_editor_absoluteY="299dp" />
@@ -161,7 +163,7 @@
                 android:layout_marginEnd="5dp"
                 android:layout_marginBottom="5dp"
                 android:inputType="textCapSentences"
-                android:text="Enter Email Info" />
+                android:text="@string/enter_email_info" />
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/create_button"
@@ -170,8 +172,7 @@
                 android:layout_marginEnd="5dp"
                 android:enabled="false"
                 android:inputType="textCapSentences"
-                android:text="Send IDs" />
-
+                android:text="@string/send_ids" />
 
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
