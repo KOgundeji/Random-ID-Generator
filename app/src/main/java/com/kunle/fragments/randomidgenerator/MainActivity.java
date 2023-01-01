@@ -319,6 +319,9 @@ public class MainActivity extends AppCompatActivity {
             selected_id_array = full_character_list;
         }
 
+        assert selected_id_array.length >= 10 : "Below minimum";
+        assert selected_id_array.length <= 62 : "Above maximum";
+
         char_list_count = selected_id_array.length;
 
         String idsNum_text = String.valueOf(bind.idsNum.getText()).trim();
