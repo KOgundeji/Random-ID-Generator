@@ -87,7 +87,11 @@ public class MainActivity extends AppCompatActivity {
         CharSequence finalText = TextUtils.concat(first_part, " ", second_part);
         bind.checkBoxLabel.setText(finalText);
 
-        //auto-create email file name to avoid user error (name based on unique data and time)
+        setFileName();
+    }
+
+    private void setFileName() {
+        //auto-creates email file name to avoid user error (name based on unique data and time)
         try {
             SimpleDateFormat formatter = new SimpleDateFormat("yyyy-MM-dd--HHmmss", Locale.US);
             Date now = new Date();
@@ -441,4 +445,14 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, "Request failed try again: " + e, Toast.LENGTH_LONG).show();
         }
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        //updates file name when user comes back to app
+        //update needed because filename based on current data and time
+        setFileName();
+    }
+
+
 }
